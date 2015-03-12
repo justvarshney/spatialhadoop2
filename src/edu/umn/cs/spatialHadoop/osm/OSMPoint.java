@@ -26,23 +26,24 @@ import edu.umn.cs.spatialHadoop.io.TextSerializerHelper;
 
 public class OSMPoint extends Point {
   public long id;
+  public String str="";
   public Map<String, String> tags = new HashMap<String, String>();
 
   @Override
   public void fromText(Text text) {
-    id = TextSerializerHelper.consumeLong(text, '\t');
-    x = TextSerializerHelper.consumeDouble(text, '\t');
-    y = TextSerializerHelper.consumeDouble(text, '\t');
+    x = TextSerializerHelper.consumeDouble(text, ',');
+    y = TextSerializerHelper.consumeDouble(text, ',');
     if (text.getLength() > 0)
-      TextSerializerHelper.consumeMap(text, tags);
+		str=text.toString();
+	//      TextSerializerHelper.consumeMap(text, tags);
   }
 
   @Override
   public Text toText(Text text) {
-    TextSerializerHelper.serializeLong(id, text, '\t');
-    TextSerializerHelper.serializeDouble(x, text, '\t');
-    TextSerializerHelper.serializeDouble(y, text, tags.isEmpty() ? '\0' : '\t');
-    TextSerializerHelper.serializeMap(text, tags);
+    TextSerializerHelper.serializeDouble(x, text, ',');
+    TextSerializerHelper.serializeDouble(y, text, tags.isEmpty() ? '\0' : ',');
+    //TextSerializerHelper.serializeMap(text, tags);
+	text.append(str.getBytes(), 0, str.length());
     return text;
   }
 
@@ -61,10 +62,9 @@ public class OSMPoint extends Point {
   @Override
   public Point clone() {
     OSMPoint c = new OSMPoint();
-    c.id = id;
     c.x = x;
     c.y = y;
-    c.tags = new HashMap<String, String>(tags);
+    c.str = new String(str);
     return c;
   }
 }

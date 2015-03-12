@@ -46,6 +46,7 @@ import edu.umn.cs.spatialHadoop.nasa.NASAPoint;
 import edu.umn.cs.spatialHadoop.nasa.NASAPoint.GradientType;
 import edu.umn.cs.spatialHadoop.operations.Sampler;
 import edu.umn.cs.spatialHadoop.osm.OSMPolygon;
+import edu.umn.cs.spatialHadoop.osm.OSMPoint;
 
 /**
  * A class that encapsulates all parameters sent for an operations implemented
@@ -384,6 +385,8 @@ public class OperationsParams extends Configuration {
       shape = new TigerShape();
     } else if (shapeTypeI.startsWith("osm")) {
       shape = new OSMPolygon();
+    } else if (shapeTypeI.startsWith("pbpoint")) {
+      shape = new OSMPoint();	  
     } else if (shapeTypeI.startsWith("poly")) {
       shape = new Polygon();
     } else if (shapeTypeI.startsWith("ogc")) {
