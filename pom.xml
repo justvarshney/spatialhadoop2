@@ -1,0 +1,149 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.pb</groupId>
+	<artifactId>spatialHadoop2</artifactId>
+	<version>2.2</version>
+	<packaging>jar</packaging>
+
+	<name>spatialHadoop2</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+	<dependency>
+		<groupId>com.googlecode.json-simple</groupId>
+		<artifactId>json-simple</artifactId>
+		<version>1.1.1</version>
+	</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-core</artifactId>
+			<version>1.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-common</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-hdfs</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-mapreduce-client-common</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-mapreduce-client-core</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.vividsolutions</groupId>
+			<artifactId>jts</artifactId>
+			<version>1.8</version>
+		</dependency>
+		<dependency>
+			<groupId>com.esri.geometry</groupId>
+			<artifactId>esri-geometry-api</artifactId>
+			<version>1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.pig</groupId>
+			<artifactId>pig</artifactId>
+			<version>0.13.0</version>
+		</dependency>
+		
+		
+		<!-- System JARS -->
+	<dependency>
+		<groupId>javax.mail</groupId>
+		<artifactId>javax.mail</artifactId>
+		<version>1.0</version>
+		<scope>system</scope>
+		<systemPath>${basedir}/lib/javax.mail.jar</systemPath>
+	</dependency>
+	<dependency>
+		<groupId>jhdfobj</groupId>
+		<artifactId>jhdfobj</artifactId>
+		<version>1.0</version>
+		<scope>system</scope>
+		<systemPath>${basedir}/lib/hdflib/jhdfobj.jar</systemPath>
+	</dependency>
+	<dependency>
+		<groupId>jhdf4obj</groupId>
+		<artifactId>jhdf4obj</artifactId>
+		<version>1.0</version>
+		<scope>system</scope>
+		<systemPath>${basedir}/lib/hdflib/jhdf4obj.jar</systemPath>
+	</dependency>
+	<dependency>
+		<groupId>jhdf</groupId>
+		<artifactId>jhdf</artifactId>
+		<version>1.0</version>
+		<scope>system</scope>
+		<systemPath>${basedir}/lib/hdflib/jhdf.jar</systemPath>
+	</dependency>
+	<dependency>
+		<groupId>JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies</groupId>
+		<artifactId>JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies</artifactId>
+		<version>1.0</version>
+		<scope>system</scope>
+		<systemPath>${basedir}/lib/JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
+	</dependency>
+
+<!-- 	<dependency>
+		<groupId>jdk.tools</groupId>
+		<artifactId>jdk.tools</artifactId>
+		<scope>system</scope>
+		<systemPath>C:/Program Files (x86)/Java/jdk1.6.0_26/lib/tools.jar</systemPath>
+	</dependency> -->
+	
+	</dependencies>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>com.pb.converter.main.ConverterTestClient</mainClass>
+						</manifest>
+					</archive>
+
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	
+</project>
