@@ -586,6 +586,7 @@ public class KNN {
         TextSerializerHelper.serializeDouble(answer.distance, text, ',');
         answer.shape.toText(text);
         ps.println(text);
+	System.out.println(text);
       }
       ps.close();
     }
@@ -734,8 +735,8 @@ public class KNN {
     if (exceptionHappened.get())
       throw new RuntimeException("Not all jobs finished correctly");
 
-    System.out.println("Time for " + queryPoints.length + " jobs is "
+//    System.out.println("Time for " + queryPoints.length + " jobs is "
         + (t2 - t1) + " millis");
-    System.out.println("Total iterations: " + TotalIterations);
+//    System.out.println("Total iterations: " + TotalIterations);
   }
 }
