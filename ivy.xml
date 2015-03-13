@@ -1,16 +1,21 @@
+<!--
+ Copyright (c) 2015 by Regents of the University of Minnesota.
+ All rights reserved. This program and the accompanying materials
+ are made available under the terms of the Apache License, Version 2.0 which 
+ accompanies this distribution and is available at
+ http://www.opensource.org/licenses/apache2.0.php.
+-->
+
 <ivy-module version="1.0">
     <info organisation="org.apache" module="dependee"/>
 	<configurations>
   	<conf name="common" description="Common libraries to all versions"/>
-  	<conf name="hadoop0" description="Hadoop 0.x libraries"/>
   	<conf name="hadoop1" description="Hadoop 1.x libraries"/>
   	<conf name="hadoop2" description="Hadoop 2.x libraries"/>
 	</configurations>
     
   <dependencies>
     <dependency org="org.apache.hadoop" name="hadoop-core" rev="1.2.1" conf="hadoop1->default"/>
-    <dependency org="org.apache.hadoop" name="hadoop-core" rev="0.20.205.0" conf="hadoop0->default"/>
-    
     
     <dependency org="org.apache.hadoop" name="hadoop-common" rev="2.4.0" conf="hadoop2->default"/>
     <dependency org="org.apache.hadoop" name="hadoop-hdfs" rev="2.4.0" conf="hadoop2->default"/>
@@ -26,7 +31,5 @@
     
     <!-- canceled as we use our custom version which includes the patch of bug PIG 3373 -->
     <!-- dependency org="org.apache.pig" name="piggybank" rev="0.13.0"/ -->
-    <!-- disabled because it supports HDF5 only while we need HDF 4 -->
-    <!-- dependency org="org.hdfgroup" name="hdf-java" rev="2.6.1"/ -->
   </dependencies>
 </ivy-module>

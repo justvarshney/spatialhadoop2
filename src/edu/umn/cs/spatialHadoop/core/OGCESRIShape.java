@@ -1,15 +1,11 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the
- * NOTICE file distributed with this work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License.
- */
+/***********************************************************************
+* Copyright (c) 2015 by Regents of the University of Minnesota.
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Apache License, Version 2.0 which 
+* accompanies this distribution and is available at
+* http://www.opensource.org/licenses/apache2.0.php.
+*
+*************************************************************************/
 package edu.umn.cs.spatialHadoop.core;
 
 import java.awt.Color;
@@ -30,6 +26,7 @@ import com.esri.core.geometry.Polyline;
 import com.esri.core.geometry.ogc.OGCConcreteGeometryCollection;
 import com.esri.core.geometry.ogc.OGCGeometry;
 import com.esri.core.geometry.ogc.OGCGeometryCollection;
+import com.esri.core.geometry.ogc.OGCLineString;
 import com.esri.core.geometry.ogc.OGCPoint;
 
 import edu.umn.cs.spatialHadoop.io.TextSerializerHelper;
@@ -233,6 +230,31 @@ public class OGCESRIShape implements Shape {
         g.drawPolygon(xpoints, ypoints, path.getPointCount());
       else if (path instanceof Polyline)
         g.drawPolyline(xpoints, ypoints, path.getPointCount());
+    }
+  }
+  
+  @Override
+  public void draw(Graphics g, double xscale, double yscale) {
+    drawESRIGeom(g, geom, xscale, yscale);
+  }
+  
+  public void drawESRIGeom(Graphics g, OGCGeometry geom, double xscale, double yscale) {
+    if (geom instanceof OGCLineString) {
+      OGCLineString linestring = (OGCLineString) geom;
+      int[] xs = new int[linestring.numPoints()];
+      int[] ys = new int[linestring.numPoints()];
+      int n = 0;
+      for (int i = 0; i < n; i++) {
+        OGCPoint point = linestring.pointN(i);
+        xs[n] = (int) Math.round(point.X() * xscale);
+        ys[n] = (int) Math.round(point.Y() * yscale);
+        // Increment number of point if this point is different than previous ones
+        if (n == 0 || xs[n] != xs[n-1] || ys[n] != ys[n-1])
+          n++;
+      }
+      g.drawPolyline(xs, ys, n);
+    } else {
+      throw new RuntimeException("Cannot draw a shape of type "+geom.getClass());
     }
   }
 }

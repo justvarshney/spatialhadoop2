@@ -1,15 +1,11 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the
- * NOTICE file distributed with this work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License.
- */
+/***********************************************************************
+* Copyright (c) 2015 by Regents of the University of Minnesota.
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Apache License, Version 2.0 which 
+* accompanies this distribution and is available at
+* http://www.opensource.org/licenses/apache2.0.php.
+*
+*************************************************************************/
 package edu.umn.cs.spatialHadoop.core;
 
 import java.io.ByteArrayOutputStream;
@@ -47,9 +43,11 @@ import edu.umn.cs.spatialHadoop.OperationsParams;
 import edu.umn.cs.spatialHadoop.mapred.RandomShapeGenerator.DistributionType;
 import edu.umn.cs.spatialHadoop.mapred.ShapeIterRecordReader;
 import edu.umn.cs.spatialHadoop.mapred.SpatialRecordReader.ShapeIterator;
+import edu.umn.cs.spatialHadoop.util.FileUtil;
 
 /**
  * Combines all the configuration needed for SpatialHadoop.
+ * 
  * @author Ahmed Eldawy
  *
  */
@@ -97,7 +95,6 @@ public class SpatialSite {
   
   public static final String OUTPUT_CELLS = "edu.umn.cs.spatial.mapReduce.GridOutputFormat.CellsInfo";
   public static final String OVERWRITE = "edu.umn.cs.spatial.mapReduce.GridOutputFormat.Overwrite";
-  public static final String RTREE = "edu.umn.cs.spatial.mapReduce.GridOutputFormat.RTree";
 
   
   private static final CompressionCodecFactory compressionCodecs =
@@ -157,7 +154,7 @@ public class SpatialSite {
     ClassLoader loader = my_class.getClassLoader();
     String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
     try {
-      for(Enumeration itr = loader.getResources(class_file);
+      for(Enumeration<URL> itr = loader.getResources(class_file);
           itr.hasMoreElements();) {
         URL url = (URL) itr.nextElement();
         if ("jar".equals(url.getProtocol())) {
@@ -255,6 +252,7 @@ public class SpatialSite {
    * @param conf
    * @param param
    * @return
+   * @deprecated - Use {@link OperationsParams#getShape(Configuration, String)}
    */
   @Deprecated
   public static Shape getShape(Configuration conf, String param) {
@@ -374,6 +372,9 @@ public class SpatialSite {
    * @throws IOException
    */
   public static boolean isRTree(FileSystem fs, Path path) throws IOException {
+    if (FileUtil.getExtensionWithoutCompression(path).equals("rtree"))
+      return true;
+    
     FileStatus file = fs.getFileStatus(path);
     Path fileToCheck;
     if (file.isDir()) {
@@ -566,4 +567,25 @@ public class SpatialSite {
     return cells.values().toArray(new CellInfo[cells.size()]);
   }
 
+  public static <S extends Shape> RTree<S> loadRTree(FileSystem fs, Path file, S shape) throws IOException {
+    RTree<S> rtree = new RTree<S>();
+    rtree.setStockObject(shape);
+    FSDataInputStream input = fs.open(file);
+    input.skip(8); // Skip the 8 bytes that contains the signature
+    rtree.readFields(input);
+    return rtree;
+  }
+
+	public static CellInfo getCellInfo(GlobalIndex<Partition> gIndex, int cellID) {
+		Map<Integer, CellInfo> cells = new HashMap<Integer, CellInfo>();
+		for (Partition p : gIndex) {
+			CellInfo cell = cells.get(p.cellId);
+			if (cell == null) {
+				cells.put(p.cellId, cell = new CellInfo(p));
+			} else {
+				cell.expand(p);
+			}
+		}
+		return cells.get(cellID);
+	}
 }

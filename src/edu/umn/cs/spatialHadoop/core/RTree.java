@@ -1,17 +1,14 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the
- * NOTICE file distributed with this work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License.
- */
+/***********************************************************************
+* Copyright (c) 2015 by Regents of the University of Minnesota.
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Apache License, Version 2.0 which 
+* accompanies this distribution and is available at
+* http://www.opensource.org/licenses/apache2.0.php.
+*
+*************************************************************************/
 package edu.umn.cs.spatialHadoop.core;
 
+import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -32,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.LineReader;
@@ -55,7 +53,7 @@ import edu.umn.cs.spatialHadoop.io.TextSerializable;
  * @author Ahmed Eldawy
  *
  */
-public class RTree<T extends Shape> implements Writable, Iterable<T> {
+public class RTree<T extends Shape> implements Writable, Iterable<T>, Closeable {
   /**Logger*/
   private static final Log LOG = LogFactory.getLog(RTree.class);
   
@@ -101,7 +99,7 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
 
   public RTree() {
   }
-
+  
   /**
    * Builds the RTree given a serialized list of elements. It uses the given
    * stockObject to deserialize these elements using
@@ -568,6 +566,10 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
     header_size += nodeCount * NodeSize;
     return header_size;
   }
+  
+  public long getEndOffset() {
+    return treeStartOffset + treeSize;
+  }
 
   /**
    * Returns total number of elements
@@ -730,6 +732,8 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
 
     @Override
     public T next() {
+      if (!hasNext())
+        return null;
       try {
         offset += reader.readLine(line);
         _stockObject.fromText(line);
@@ -893,6 +897,171 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
   }
   
   /**
+   * An iterator used to return all search results
+   * @author Ahmed Eldawy
+   */
+  public class SearchIterator implements Iterable<T>, Iterator<T> {
+
+    /**The last object that has returned by next*/
+    private T resultShape;
+    
+    /**The next object that will be returned on the following next() call*/
+    private T nextResultShape;
+
+    /**MBR of the query shape for fast comparison with nodes*/
+    private Rectangle queryMBR;
+    
+    /**Shape to search*/
+    private Shape queryShape;
+    
+    /**Nodes or parts of the file to be searched*/
+    private Stack<Integer> toBeSearched = new Stack<Integer>();
+    
+    /**Used to deserialize node information*/
+    private Rectangle nodeMBR = new Rectangle();
+    
+    /**Used to deserialize record information*/
+    private Text line = new Text2();
+    
+    /**If searching within node, these are the offsets of records in it*/
+    private int firstOffset, lastOffset;
+    
+    /**If searching within a node, lineReader points to result items*/
+    LineReader lineReader;
+
+
+    public SearchIterator(Shape queryShape) {
+      this.queryShape = queryShape;
+      this.queryMBR = queryShape.getMBR();
+      toBeSearched.push(0); // Start from the root
+      this.resultShape = (T) stockObject.clone();
+      this.nextResultShape = (T) stockObject.clone();
+      prepareNextResult();
+    }
+    
+    @Override
+    public Iterator<T> iterator() {
+      return this;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return nextResultShape != null;
+    }
+
+    @Override
+    public T next() {
+      T temp = resultShape;
+      resultShape = nextResultShape;
+      nextResultShape = temp;
+      prepareNextResult();
+      return resultShape;
+    }
+    
+    @Override
+    public void remove() {
+      throw new RuntimeException("Unsupported method");
+    }
+
+    /**
+     * Search for next item in result and store in in resultShape.
+     * If no more results found, set resultShape to null
+     */
+    protected void prepareNextResult() {
+      try {
+        while (lineReader != null && firstOffset < lastOffset) {
+          // Case 1: Searching within a node
+          firstOffset += lineReader.readLine(line);
+          nextResultShape.fromText(line);
+          if (nextResultShape.isIntersected(queryShape)) {
+            return;
+          }
+        }
+        // Case 2: Searching in nodes
+        while (!toBeSearched.isEmpty()) {
+
+          int searchNumber = toBeSearched.pop();
+          int mbrsToTest = searchNumber == 0 ? 1 : degree;
+
+          if (searchNumber < nodeCount) {
+            // Searching in nodes
+            long nodeOffset = NodeSize * searchNumber;
+            structure.seek(nodeOffset);
+            int dataOffset = structure.readInt();
+
+            for (int i = 0; i < mbrsToTest; i++) {
+              nodeMBR.readFields(structure);
+              int lastOffset = (searchNumber+i) == nodeCount - 1 ?
+                  treeSize : structure.readInt();
+              if (queryMBR.contains(nodeMBR)) {
+                // The node is full contained in the query range.
+                // Save the time and do full scan for this node
+                toBeSearched.push(dataOffset);
+                // Checks if this node is the last node in its level
+                // This can be easily detected because the next node in the level
+                // order traversal will be the first node in the next level
+                // which means it will have an offset less than this node
+                if (lastOffset <= dataOffset)
+                  lastOffset = treeSize;
+                toBeSearched.push(lastOffset);
+              } else if (queryMBR.isIntersected(nodeMBR)) {
+                // Node partially overlaps with query. Go deep under this node
+                if (searchNumber < nonLeafNodeCount) {
+                  // Search child nodes
+                  toBeSearched.push((searchNumber + i) * degree + 1);
+                } else {
+                  // Search all elements in this node
+                  toBeSearched.push(dataOffset);
+                  // Checks if this node is the last node in its level
+                  // This can be easily detected because the next node in the level
+                  // order traversal will be the first node in the next level
+                  // which means it will have an offset less than this node
+                  if (lastOffset <= dataOffset)
+                    lastOffset = treeSize;
+                  toBeSearched.push(lastOffset);
+                }
+              }
+              dataOffset = lastOffset;
+            }
+          } else {
+            // Search for data items (records)
+            lastOffset = searchNumber;
+            firstOffset = toBeSearched.pop();
+
+            data.seek(firstOffset + treeStartOffset);
+            lineReader = new LineReader(data);
+            while (firstOffset < lastOffset) {
+              firstOffset += lineReader.readLine(line);
+              nextResultShape.fromText(line);
+              if (nextResultShape.isIntersected(queryShape)) {
+                return;
+              }
+            }
+          }
+        }
+        // No more results in the tree
+        nextResultShape = null;
+        
+      } catch (IOException e) {
+        e.printStackTrace();
+        nextResultShape = null;
+      }
+    }
+    
+  }
+  
+  /**
+   * Searches the tree for all shapes overlapping the queryShape and returns
+   * an iterator for all these shapes
+   * @param queryShape
+   * @return
+   */
+  public Iterable<T> search(Shape queryShape) {
+    return new SearchIterator(queryShape);
+  }
+
+  
+  /**
    * Performs a range query over this tree using the given query range.
    * @param query - The query rectangle to use (TODO make it any shape not just rectangle)
    * @param output - Shapes found are reported to this output. If null, results are not reported
@@ -929,10 +1098,10 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
       // Initialize result and query range
       distances.clear(); shapes.clear();
       Rectangle queryRange = new Rectangle();
-      queryRange.x1 = qx - query_radius / 2;
-      queryRange.y1 = qy - query_radius / 2;
-      queryRange.x2 = qx + query_radius / 2;
-      queryRange.y2 = qy + query_radius / 2;
+      queryRange.x1 = qx - query_radius;
+      queryRange.y1 = qy - query_radius;
+      queryRange.x2 = qx + query_radius;
+      queryRange.y2 = qy + query_radius;
       // Retrieve all results in range
       search(queryRange, new ResultCollector<T>() {
         @Override
@@ -997,7 +1166,8 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
   protected static<S1 extends Shape, S2 extends Shape> int spatialJoinMemory(
       final RTree<S1> R,
       final RTree<S2> S,
-      final ResultCollector2<S1, S2> output)
+      final ResultCollector2<S1, S2> output,
+      final Reporter reporter)
       throws IOException {
     S1[] rs = (S1[]) Array.newInstance(R.stockObject.getClass(), R.getElementCount());
     int i = 0;
@@ -1013,7 +1183,7 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
     if (i != ss.length)
       throw new RuntimeException(i+"!="+ss.length);
 
-    return SpatialAlgorithms.SpatialJoin_planeSweep(rs, ss, output);
+    return SpatialAlgorithms.SpatialJoin_planeSweep(rs, ss, output, reporter);
   }
   
   //LRU cache used to avoid deserializing the same records again and again
@@ -1059,7 +1229,8 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
   protected static<S1 extends Shape, S2 extends Shape> int spatialJoinDisk(
       final RTree<S1> R,
       final RTree<S2> S,
-      final ResultCollector2<S1, S2> output)
+      final ResultCollector2<S1, S2> output,
+      final Reporter reporter)
       throws IOException {
     // Reserve locations for nodes MBRs and data offset [start, end)
     final Rectangle[] r_nodes = new Rectangle[R.degree];
@@ -1250,6 +1421,7 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
           }
         }
       }
+      reporter.progress();
     }
     return result_count;
   }
@@ -1257,14 +1429,15 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
   public static<S1 extends Shape, S2 extends Shape> int spatialJoin(
       final RTree<S1> R,
       final RTree<S2> S,
-      final ResultCollector2<S1, S2> output)
+      final ResultCollector2<S1, S2> output,
+      final Reporter reporter)
       throws IOException {
     try {
       if (R.treeStartOffset >= 0 && S.treeStartOffset >= 0) {
         // Both trees are read from disk
-        return spatialJoinDisk(R, S, output);
+        return spatialJoinDisk(R, S, output, reporter);
       } else {
-        return spatialJoinMemory(R, S, output);
+        return spatialJoinMemory(R, S, output, reporter);
       }
     } catch (TopologyException e) {
       e.printStackTrace();
@@ -1404,4 +1577,11 @@ public class RTree<T extends Shape> implements Writable, Iterable<T> {
     int nodeCount = (int) ((Math.pow(degree, height) - 1) / (degree - 1));
     return TreeHeaderSize + nodeCount * NodeSize;
   }
+
+  @Override
+  public void close() throws IOException {
+    if (data != null)
+      data.close();
+  }
+  
 }

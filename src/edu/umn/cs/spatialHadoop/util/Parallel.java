@@ -1,9 +1,11 @@
-/*******************************************************************
- * Copyright (C) 2014 by Regents of the University of Minnesota.   *
- *                                                                 *
- * This Software is released under the Apache License, Version 2.0 *
- * http://www.apache.org/licenses/LICENSE-2.0                      *
- *******************************************************************/
+/***********************************************************************
+* Copyright (c) 2015 by Regents of the University of Minnesota.
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Apache License, Version 2.0 which 
+* accompanies this distribution and is available at
+* http://www.opensource.org/licenses/apache2.0.php.
+*
+*************************************************************************/
 package edu.umn.cs.spatialHadoop.util;
 
 import java.util.Vector;
@@ -51,7 +53,7 @@ public class Parallel {
   
   public static <T> Vector<T> forEach(int size, RunnableRange<T> r) {
     try {
-      int parallelism = Runtime.getRuntime().availableProcessors() * 2;
+      int parallelism = Math.min(size, Runtime.getRuntime().availableProcessors());
       final int[] partitions = new int[parallelism + 1];
       for (int i_thread = 0; i_thread <= parallelism; i_thread++)
         partitions[i_thread] = i_thread * size / parallelism;

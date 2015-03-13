@@ -1,15 +1,11 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the
- * NOTICE file distributed with this work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License.
- */
+/***********************************************************************
+* Copyright (c) 2015 by Regents of the University of Minnesota.
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Apache License, Version 2.0 which 
+* accompanies this distribution and is available at
+* http://www.opensource.org/licenses/apache2.0.php.
+*
+*************************************************************************/
 package edu.umn.cs.spatialHadoop.mapred;
 
 import java.io.IOException;
@@ -26,6 +22,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
@@ -39,15 +36,17 @@ import edu.umn.cs.spatialHadoop.core.GlobalIndex;
 import edu.umn.cs.spatialHadoop.core.Partition;
 import edu.umn.cs.spatialHadoop.core.ResultCollector;
 import edu.umn.cs.spatialHadoop.core.SpatialSite;
-import edu.umn.cs.spatialHadoop.nasa.HDFRecordReader;
 import edu.umn.cs.spatialHadoop.nasa.HTTPFileSystem;
 
 /**
  * An input format used with spatial data. It filters generated splits before
  * creating record readers.
+ * 
+ * This class is deprecated in favor to {@link SpatialInputFormat2}
  * @author Ahmed Eldawy
  *
  */
+@Deprecated
 public abstract class SpatialInputFormat<K, V> extends FileInputFormat<K, V> {
   
   /**
@@ -76,12 +75,6 @@ public abstract class SpatialInputFormat<K, V> extends FileInputFormat<K, V> {
       compressionCodecs = new CompressionCodecFactory(job);
     if (split instanceof FileSplit) {
       FileSplit fsplit = (FileSplit) split;
-      if (fsplit.getPath().getName().toLowerCase().endsWith(".hdf")) {
-        // HDF File. Create HDFRecordReader
-        return (RecordReader<K, V>) new HDFRecordReader(job, fsplit,
-            job.get(HDFRecordReader.DatasetName),
-            job.getBoolean(HDFRecordReader.SkipFillValue, true));
-      }
       try {
         @SuppressWarnings("rawtypes")
         Constructor<? extends RecordReader> rrConstructor;
@@ -201,15 +194,18 @@ public abstract class SpatialInputFormat<K, V> extends FileInputFormat<K, V> {
     if (file.getName().toLowerCase().endsWith(".hdf"))
       return false;
     final CompressionCodec codec = compressionCodecs.getCodec(file);
-    if (codec != null)
+    if (codec != null && !(codec instanceof SplittableCompressionCodec))
       return false;
-
+    
     try {
-      // For performance reasons, skip checking isRTree if the file is on http
-      // isRTree needs to open the file and reads the first 8 bytes. Doing this
-      // in the input format means it will open all files in input which is
-      // very costly.
-      return !(fs instanceof HTTPFileSystem) && !SpatialSite.isRTree(fs, file);
+      // To avoid opening the file and checking the first 8-bytes to look for
+      // an R-tree signature, we never split a file read over HTTP
+      if (fs instanceof HTTPFileSystem)
+        return false;
+      // ... and never split a file less than 150MB to perform better with many small files
+      if (fs.getFileStatus(file).getLen() < 150 * 1024 * 1024)
+        return false;
+      return !SpatialSite.isRTree(fs, file);
     } catch (IOException e) {
       return super.isSplitable(fs, file);
     }
