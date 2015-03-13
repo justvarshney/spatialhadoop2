@@ -1,4 +1,4 @@
 language: java
-script: ant bootstrap package2
+script: exec "/usr/lib/jvm/java-6-openjdk-amd64/bin/java" -classpath "/usr/share/java/ant.jar:/usr/share/java/ant-launcher.jar:/usr/share/java/jaxp_parser_impl.jar:/usr/share/java/xml-commons-apis.jar:/usr/lib/jvm/java-6-openjdk-amd64/lib/tools.jar:/root/.ant/lib/*" -Dant.home="/usr/share/ant" -Dant.library.dir="/usr/share/ant/lib" org.apache.tools.ant.launch.Launcher -cp "" "package2"
 jdk:
   - openjdk6
