@@ -1,1 +1,4 @@
-mvn install -DskipTests=true
+language: java
+install: mvn install -DskipTests=true
+jdk:
+  - oraclejdk6
