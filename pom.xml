@@ -74,41 +74,8 @@
 		
 		
 		<!-- System JARS -->
-	<dependency>
-		<groupId>javax.mail</groupId>
-		<artifactId>javax.mail</artifactId>
-		<version>1.0</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/javax.mail.jar</systemPath>
-	</dependency>
-	<dependency>
-		<groupId>jhdfobj</groupId>
-		<artifactId>jhdfobj</artifactId>
-		<version>1.0</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/hdflib/jhdfobj.jar</systemPath>
-	</dependency>
-	<dependency>
-		<groupId>jhdf4obj</groupId>
-		<artifactId>jhdf4obj</artifactId>
-		<version>1.0</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/hdflib/jhdf4obj.jar</systemPath>
-	</dependency>
-	<dependency>
-		<groupId>jhdf</groupId>
-		<artifactId>jhdf</artifactId>
-		<version>1.0</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/hdflib/jhdf.jar</systemPath>
-	</dependency>
-	<dependency>
-		<groupId>JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies</groupId>
-		<artifactId>JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies</artifactId>
-		<version>1.0</version>
-		<scope>system</scope>
-		<systemPath>${basedir}/lib/JSONConverter-0.0.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
-	</dependency>
+
+
 
 <!-- 	<dependency>
 		<groupId>jdk.tools</groupId>
