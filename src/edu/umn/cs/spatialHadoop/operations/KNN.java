@@ -590,6 +590,23 @@ public class KNN {
       }
       ps.close();
     }
+    else {
+        Vector<ShapeWithDistance<S>> resultsOrdered =
+            new Vector<ShapeWithDistance<S>>((int) resultCount);
+        resultsOrdered.setSize((int) resultCount);
+        while (knn.size() > 0) {
+          ShapeWithDistance<S> nextAnswer = knn.pop();
+          resultsOrdered.set(knn.size(), nextAnswer);
+        }
+        
+        Text text = new Text();
+        for (ShapeWithDistance<S> answer : resultsOrdered) {
+          text.clear();
+          TextSerializerHelper.serializeDouble(answer.distance, text, ',');
+          answer.shape.toText(text);
+  	System.out.println(text);
+        }
+    }
     TotalIterations.addAndGet(iterations);
     return resultCount;
     
