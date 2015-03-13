@@ -1,3 +1,4 @@
 language: java
-script: ant package2
-
+script: ant bootstrap package2
+jdk:
+  - openjdk6
