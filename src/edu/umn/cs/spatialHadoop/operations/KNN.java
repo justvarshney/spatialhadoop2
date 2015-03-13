@@ -736,7 +736,7 @@ public class KNN {
       throw new RuntimeException("Not all jobs finished correctly");
 
 //    System.out.println("Time for " + queryPoints.length + " jobs is "
-        + (t2 - t1) + " millis");
+//        + (t2 - t1) + " millis");
 //    System.out.println("Total iterations: " + TotalIterations);
   }
 }
