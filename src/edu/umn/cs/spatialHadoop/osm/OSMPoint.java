@@ -37,7 +37,7 @@ public class OSMPoint extends Point {
   @Override
   public Text toText(Text text) {
     TextSerializerHelper.serializeDouble(x, text, ',');
-    TextSerializerHelper.serializeDouble(y, text, tags.isEmpty() ? '\0' : ',');
+    TextSerializerHelper.serializeDouble(y, text, str.isEmpty() ? '\0' : ',');
     //TextSerializerHelper.serializeMap(text, tags);
 	text.append(str.getBytes(), 0, str.length());
     return text;
